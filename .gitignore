@@ -1,0 +1,10 @@
+# Environment variables
+.env
+*.env
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE specific files (example for VSCode)
+.vscode/
