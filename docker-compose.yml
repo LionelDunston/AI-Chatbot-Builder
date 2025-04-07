@@ -1,0 +1,15 @@
+version: '3.8' # Specifies the Compose file version
+
+services: # Defines the different containers (services) in your application
+  backend: # The name of our backend service
+    build: ./backend # Tells Compose to build an image using the Dockerfile in the ./backend directory
+    ports:
+      # Maps port 8000 on your host machine to port 80 inside the container
+      # Format: "HOST_PORT:CONTAINER_PORT"
+      - "8000:80"
+    volumes:
+      # Mounts the local ./backend directory into the container's /app directory
+      # This allows code changes locally to be reflected inside the container immediately
+      # without rebuilding the image (essential for development with --reload)
+      # Note: Dependencies in requirements.txt still need a rebuild if changed.
+      - ./backend:/app
