@@ -2,7 +2,7 @@
 FROM python:3.11-slim
 
 # Set the working directory inside the container
-WORKDIR /app
+WORKDIR /code
 
 # Copy the requirements file into the container at /app
 COPY requirements.txt .
@@ -13,9 +13,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+
+# Set the PYTHONPATH environment variable
+# This tells Python to look for modules in /code
+ENV PYTHONPATH=/code 
 # Copy the rest of the application code into the container at /app
 # This includes main.py and any other .py files you add later
-COPY . .
+COPY ./app /code/app
 
 # Command to run the application when the container starts
 # Uses uvicorn to run the FastAPI app (main:app)
