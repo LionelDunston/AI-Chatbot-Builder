@@ -8,3 +8,10 @@ Thumbs.db
 
 # IDE specific files (example for VSCode)
 .vscode/
+
+# Python # <--- Add this section
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
