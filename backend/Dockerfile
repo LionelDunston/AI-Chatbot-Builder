@@ -22,3 +22,8 @@ COPY . .
 # --host 0.0.0.0 makes it accessible from outside the container
 # --port 80 is the standard HTTP port we'll map to
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+# File: backend/Dockerfile (last line)
+
+# OLD: CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+# NEW: Point to app.main:app and add --reload for development volume mount
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
