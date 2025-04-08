@@ -1,4 +1,6 @@
 # app/api/endpoints/chatbots.py
+from app.api import deps
+from app.db import models
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List
@@ -13,57 +15,58 @@ from app.schemas.user import UserRead # Need this if you add user info later
 
 router = APIRouter()
 
-@router.post("/", response_model=ChatbotRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=schemas.ChatbotRead, status_code=status.HTTP_201_CREATED)
 async def create_new_chatbot(
     *,
     db: AsyncSession = Depends(get_async_db),
     chatbot_in: schemas.ChatbotCreate,
-    # --- IMPORTANT: Handle Owner ID ---
-    # Option 1: Hardcode for now (requires user ID 1 to exist)
-    owner_id: int = 1 # <<< TEMPORARY - REPLACE WITH AUTHENTICATION LATER
-    # Option 2: Add dependency for current user (Requires Authentication setup first)
-    # current_user: models.User = Depends(get_current_active_user) # <<< FUTURE
+    # --- REPLACE hardcoded owner_id with dependency ---
+    # owner_id: int = 1 # <<< REMOVE THIS
+    current_user: models.User = Depends(deps.get_current_active_user) # <<< ADD THIS
+    # --------------------------------------------------
 ) -> Any:
     """
-    Create new chatbot. Requires owner_id (currently hardcoded).
+    Create new chatbot. Requires authentication.
     """
-    # In future, use current_user.id instead of hardcoded owner_id
+    # --- Use the authenticated user's ID ---
     chatbot = await crud.crud_chatbot.create_chatbot(
-        db=db, chatbot_in=chatbot_in, owner_id=owner_id # Use hardcoded ID for now
+        db=db, chatbot_in=chatbot_in, owner_id=current_user.id # <<< USE THIS
     )
+    # ----------------------------------------
     return chatbot
 
-@router.get("/{chatbot_id}", response_model=ChatbotRead)
+# --- Optionally protect other chatbot endpoints similarly ---
+@router.get("/{chatbot_id}", response_model=schemas.ChatbotRead)
 async def read_chatbot_by_id(
     chatbot_id: int,
     db: AsyncSession = Depends(get_async_db),
+    current_user: models.User = Depends(deps.get_current_active_user) # <<< ADD protection
 ) -> Any:
-    """
-    Get a specific chatbot by id.
-    """
     chatbot = await crud.crud_chatbot.get_chatbot(db, chatbot_id=chatbot_id)
     if not chatbot:
-         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The chatbot with this id does not exist",
-        )
-    # TODO: Add check later to ensure the current user owns this chatbot
+         raise HTTPException(status_code=404, detail="Chatbot not found")
+    # --- Add ownership check ---
+    if chatbot.owner_id != current_user.id and not current_user.is_superuser:
+         raise HTTPException(status_code=403, detail="Not enough permissions")
+    # -------------------------
     return chatbot
 
-# Example: Get chatbots for the (currently hardcoded) owner
-@router.get("/my/", response_model=List[ChatbotRead])
+@router.get("/my/", response_model=List[schemas.ChatbotRead])
 async def read_my_chatbots(
     db: AsyncSession = Depends(get_async_db),
-    # --- IMPORTANT: Handle Owner ID ---
-    owner_id: int = 1, # <<< TEMPORARY
-    # current_user: models.User = Depends(get_current_active_user), # <<< FUTURE
+    # --- REPLACE hardcoded owner_id ---
+    # owner_id: int = 1, # <<< REMOVE
+    current_user: models.User = Depends(deps.get_current_active_user), # <<< ADD
+    # --------------------------------
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
-    Retrieve chatbots owned by the user (currently hardcoded user 1).
+    Retrieve chatbots owned by the current authenticated user.
     """
+    # --- Use authenticated user's ID ---
     chatbots = await crud.crud_chatbot.get_chatbots_by_owner(
-        db=db, owner_id=owner_id, skip=skip, limit=limit # Use hardcoded ID for now
+        db=db, owner_id=current_user.id, skip=skip, limit=limit # <<< USE THIS
     )
+    # -----------------------------------
     return chatbots

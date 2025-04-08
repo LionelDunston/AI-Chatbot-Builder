@@ -17,9 +17,9 @@ class Settings(BaseSettings):
 
     # JWT Settings (for authentication later)
     # Reads from SECRET_KEY env var set in docker-compose.yml
-    SECRET_KEY: str
+    SECRET_KEY: str = '5ec013a38996783fa42aca842f498411f0cc9e6dd9e0050b1f1297e1f7219e5e'
     ALGORITHM: str = "HS256" # Algorithm for JWT signing
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 # How long access tokens are valid
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # How long access tokens are valid
 
     class Config:
         # If you were using a .env file heavily, you'd specify it here

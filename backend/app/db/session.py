@@ -1,44 +1,37 @@
-# app/db/session.py
-from typing import AsyncGenerator # <-- Need this for async dependency
+# backend/app/db/session.py
+from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from app.core.config import settings
+from app.core.config import settings # Import settings for DATABASE_URL
 
-# Ensure URL uses the async scheme (optional check, compose should provide it)
-async_database_url = settings.DATABASE_URL
-if not async_database_url.startswith("postgresql+asyncpg"):
-    # Handle error or try to fix, but ideally docker-compose provides correct URL
-    raise ValueError(f"Invalid DATABASE_URL scheme for async: {settings.DATABASE_URL}. Expected 'postgresql+asyncpg://'")
-
-# --- Use ASYNC engine ---
+# --- Engine Creation ---
 async_engine = create_async_engine(
-    async_database_url,
+    settings.DATABASE_URL,
     pool_pre_ping=True,
-    # echo=True # Uncomment for debugging SQL statements
+    # echo=True # Uncomment for debugging SQL
 )
-# ----------------------
+# ---------------------
 
-# --- Use ASYNC session maker ---
+# --- Session Maker Creation ---
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine,
     class_=AsyncSession,
+    expire_on_commit=False,
     autocommit=False,
     autoflush=False,
-    expire_on_commit=False # Recommended for async sessions
 )
-# -----------------------------
+# --------------------------
 
-# --- ASYNC dependency function ---
+# --- ASYNC Dependency Function ---
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency generator for async database sessions."""
     async with AsyncSessionLocal() as session:
-        # Optional: You could yield session.begin() here if you want
-        # transactions automatically handled per request block.
-        # Requires careful thought about transaction boundaries.
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback() # Optional: Rollback on exception within endpoint
+            raise
+        # finally: # Not strictly needed as 'async with' handles close
+        #    await session.close()
 # -------------------------------
 
-# --- REMOVE synchronous parts ---
-# create_engine(...)
-# SessionLocal = sessionmaker(...)
-# def get_db(): ...
-# --- END REMOVAL ---
+# --- REMOVE get_db() if it was synchronous ---
