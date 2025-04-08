@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base import Base # Import the Base class from base.py
+from .base_class import Base
 
 class User(Base):
     # Tells SQLAlchemy the name of the table in the database

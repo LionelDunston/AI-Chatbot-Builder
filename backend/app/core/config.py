@@ -2,7 +2,7 @@
 import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
-
+from functools import lru_cache 
 # Load .env file if it exists (for local overrides without compose)
 # Useful if you want to run locally without docker-compose sometimes
 load_dotenv()
@@ -27,6 +27,13 @@ class Settings(BaseSettings):
         env_file_encoding = 'utf-8'
         # Pydantic v2 uses model_config instead of Config class for some settings
         # but env_file is still supported here for now.
+
+
+# Use lru_cache to create a singleton Settings instance
+# This prevents reading .env file or env vars multiple times
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
 
 # Create an instance of the Settings class.
 # This instance will be imported and used throughout the application.

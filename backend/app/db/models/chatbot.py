@@ -3,6 +3,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func # For database functions like default timestamps
 from app.db.base import Base # Import the Base class
+from .base_class import Base # Relative import
+from .user import User       
 
 class Chatbot(Base):
     # Tells SQLAlchemy the name of the table in the database

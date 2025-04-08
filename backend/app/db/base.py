@@ -3,6 +3,19 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.core.config import settings # Import settings to get DATABASE_URL
 
+# app/db/base.py
+from app.db.models.base_class import Base
+from app.db.models.user import User
+from app.db.models.chatbot import Chatbot
+# ... import other models ...
+
+# 1. Import the Base class definition itself
+from app.db.models.base_class import Base
+
+# 2. Import all your models so they register with Base's metadata
+from app.db.models.user import User
+from app.db.models.chatbot import Chatbot
+
 # Create an asynchronous SQLAlchemy engine instance using the URL from settings
 engine = create_async_engine(
     settings.DATABASE_URL,
