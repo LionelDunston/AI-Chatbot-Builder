@@ -1,30 +1,27 @@
-# File: backend/app/main.py
+# backend/app/main.py
 from fastapi import FastAPI
-from app.api.api import api_router # <--- IMPORT the main api_router
-# from app.core.config import settings
+from app.api.endpoints import users, chatbots
+# --- REMOVED unused imports ---
+# from app.db.session import engine  # REMOVED
+# from app.db.base import Base       # Remove if Base is also not used directly here
+# -----------------------------
+import logging
 
-# Create the main FastAPI application instance
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="AI Chatbot Builder API",
     description="API for creating and managing AI chatbots.",
-    version="0.1.0",
+    version="0.1.0"
 )
 
-# --- INCLUDE THE API ROUTER ---
-# All routes defined in api_router (which includes chatbots.router)
-# will be added to the main app instance.
-# We can add a prefix like /api/v1 if desired
-app.include_router(api_router, prefix="/api/v1")
-# -----------------------------
+# --- INCLUDE ROUTERS ---
+api_prefix = "/api/v1"
+app.include_router(users.router, prefix=f"{api_prefix}/users", tags=["users"])
+app.include_router(chatbots.router, prefix=f"{api_prefix}/chatbots", tags=["chatbots"])
+# -----------------------
 
-# Simple root endpoint (optional, can be removed if prefixing everything)
 @app.get("/")
-async def root():
-    # CORRECTED MESSAGE: Point to /docs, not /api/v1/docs
-    return {"message": "Welcome to AI Chatbot Builder API v0.1.0 - Use /docs for API documentation."}
-
-# @app.on_event("startup")
-# async def startup_event(): ...
-#
-# @app.on_event("shutdown")
-# async def shutdown_event(): ...
+async def read_root():
+    return {"message": f"Welcome to {app.title} v{app.version}"}

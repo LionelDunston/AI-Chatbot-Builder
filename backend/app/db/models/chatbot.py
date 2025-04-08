@@ -1,26 +1,44 @@
-# File: backend/app/db/models/chatbot.py
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func # For database functions like default timestamps
-from app.db.base import Base # Import the Base class
-from .base_class import Base # Relative import
-from .user import User       
+# backend/app/db/models/chatbot.py
+
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum as SQLEnum
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.sql import func
+from typing import TYPE_CHECKING # Import TYPE_CHECKING
+
+# Correctly import Base using relative path within the 'models' package
+from .base_class import Base
+
+# Correctly import the Enum from the schemas module where it's defined
+from app.schemas.chatbot import ChatbotStatus
+
+# Use TYPE_CHECKING block for imports needed only for type hinting
+# to prevent runtime circular dependency issues with User.
+if TYPE_CHECKING:
+    from .user import User # Correct relative import for User type hint
 
 class Chatbot(Base):
-    # Tells SQLAlchemy the name of the table in the database
     __tablename__ = "chatbots"
 
-    # Define columns for the 'chatbots' table
-    id = Column(Integer, primary_key=True, index=True) # Primary key
-    name = Column(String, index=True, nullable=False) # Name of the chatbot
-    created_at = Column(DateTime(timezone=True), server_default=func.now()) # Timestamp when created (using DB server time)
-    # status = Column(String, default="PENDING") # Example: track processing status
-    # config = Column(Text) # Example: store JSON config as text
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
-    # Foreign Key linking to the 'users' table (specifically the 'id' column)
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Use the imported Enum for the column type, adding explicit DB name
+    status: Mapped[ChatbotStatus] = mapped_column(
+        SQLEnum(ChatbotStatus, name="chatbotstatus", create_type=False), # Use create_type=False if type exists
+        default=ChatbotStatus.PENDING,
+        nullable=False
+    )
+    # Note: If using Alembic migrations later, managing Enum types requires care.
+    # create_type=False might be needed if the type is managed by Alembic. Start without it if unsure.
 
-    # Define the relationship back to the User model
-    # 'owner' will be the User object associated with this chatbot
-    # 'back_populates' links this to the 'chatbots' attribute in the User model
-    owner = relationship("User", back_populates="chatbots")
+    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # SQLAlchemy's relationship uses string reference "User".
+    # The TYPE_CHECKING import above is only needed if you explicitly use
+    # the 'User' type elsewhere in this file for type hinting purposes.
+    owner: Mapped["User"] = relationship("User", back_populates="chatbots")
+
+    def __repr__(self):
+        return f"<Chatbot(id={self.id}, name='{self.name}', owner_id={self.owner_id})>"

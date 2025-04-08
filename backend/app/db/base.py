@@ -6,15 +6,18 @@ from app.core.config import settings # Import settings to get DATABASE_URL
 # app/db/base.py
 from app.db.models.base_class import Base
 from app.db.models.user import User
-from app.db.models.chatbot import Chatbot
-# ... import other models ...
+from app.db.models.chatbot import Chatbot # This import should now work
 
-# 1. Import the Base class definition itself
+# backend/app/db/base.py
+
+# 1. Import the Base class definition directly from where it lives
 from app.db.models.base_class import Base
 
-# 2. Import all your models so they register with Base's metadata
+# 2. Import the fully defined model classes.
 from app.db.models.user import User
 from app.db.models.chatbot import Chatbot
+# Import any other models from app.db.models here
+
 
 # Create an asynchronous SQLAlchemy engine instance using the URL from settings
 engine = create_async_engine(

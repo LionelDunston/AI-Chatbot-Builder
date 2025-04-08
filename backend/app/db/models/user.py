@@ -1,20 +1,34 @@
-# File: backend/app/db/models/user.py
+# backend/app/db/models/user.py
+
 from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.orm import relationship
-from app.db.base import Base # Import the Base class from base.py
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import List, TYPE_CHECKING # Import TYPE_CHECKING
+
+# Correctly import Base using relative path within the 'models' package
 from .base_class import Base
 
+# Use TYPE_CHECKING block for imports needed only for type hinting
+# to prevent runtime circular dependency issues with Chatbot.
+if TYPE_CHECKING:
+    from .chatbot import Chatbot # Correct relative import for Chatbot type hint
+
 class User(Base):
-    # Tells SQLAlchemy the name of the table in the database
     __tablename__ = "users"
 
-    # Define columns for the 'users' table
-    id = Column(Integer, primary_key=True, index=True) # Auto-incrementing primary key
-    email = Column(String, unique=True, index=True, nullable=False) # User's email, must be unique
-    hashed_password = Column(String, nullable=False) # Store hashed password, never plain text
-    is_active = Column(Boolean(), default=True) # Flag to activate/deactivate user
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean(), default=False)
 
-    # Define the relationship to the Chatbot model
-    # 'chatbots' will be a list of Chatbot objects associated with this user
-    # 'back_populates' links this relationship to the 'owner' attribute in the Chatbot model
-    chatbots = relationship("Chatbot", back_populates="owner", cascade="all, delete-orphan")
+    # SQLAlchemy's relationship uses string reference "Chatbot".
+    # The TYPE_CHECKING import above is only needed if you explicitly use
+    # the 'Chatbot' type elsewhere in this file for type hinting purposes.
+    chatbots: Mapped[List["Chatbot"]] = relationship(
+        "Chatbot",
+        back_populates="owner",
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email='{self.email}')>"
