@@ -5,6 +5,7 @@ from sqlalchemy import update # If needed for update later
 from app.db.models.chatbot import Chatbot, ChatbotStatus # Import DB model and Enum
 from app.schemas.chatbot import ChatbotCreate # Import Pydantic schema
 from typing import List
+from app.schemas.chatbot import ChatbotUpdate
 
 async def get_chatbot(db: AsyncSession, chatbot_id: int) -> Chatbot | None:
     """Gets a single chatbot by ID."""
@@ -34,12 +35,41 @@ async def create_chatbot(db: AsyncSession, *, chatbot_in: ChatbotCreate, owner_i
     await db.refresh(db_chatbot)
     return db_chatbot
 
-# Example for later (Update status)
-# async def update_chatbot_status(db: AsyncSession, chatbot_id: int, status: ChatbotStatus) -> Chatbot | None:
-#    await db.execute(
-#        update(Chatbot)
-#        .where(Chatbot.id == chatbot_id)
-#        .values(status=status)
-#    )
-#    await db.commit()
-#    return await get_chatbot(db, chatbot_id) # Return updated chatbot
+# --- NEW FUNCTION: Update Chatbot ---
+async def update_chatbot(
+    db: AsyncSession, *, chatbot_id: int, chatbot_in: ChatbotUpdate, owner_id: int
+) -> Chatbot | None:
+    """
+    Updates a chatbot. Ensures the user owns the chatbot.
+    Returns the updated chatbot object or None if not found or not owned.
+    """
+    # First, get the existing chatbot
+    db_chatbot = await get_chatbot(db=db, chatbot_id=chatbot_id)
+
+    # Check if chatbot exists and if the user owns it
+    if not db_chatbot or db_chatbot.owner_id != owner_id:
+        return None # Indicate not found or not authorized
+
+    # Get the update data from the input schema
+    update_data = chatbot_in.model_dump(exclude_unset=True) # Get only fields that were provided
+
+    # Update the chatbot object in memory
+    needs_update = False
+    for field, value in update_data.items():
+        if hasattr(db_chatbot, field) and value is not None:
+             setattr(db_chatbot, field, value)
+             needs_update = True
+
+    # Only commit if there were actual changes
+    if needs_update:
+        # Manually set updated_at if needed, or rely on DB trigger if set up
+        # db_chatbot.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        db.add(db_chatbot) # Add tracked object back to session (though often tracked already)
+        await db.commit()
+        await db.refresh(db_chatbot)
+
+    return db_chatbot
+# ------------------------------------
+
+# --- (Optional) Add Delete function later ---
+# async def delete_chatbot(db: AsyncSession, *, chatbot_id: int, owner_id: int) -> bool: ...

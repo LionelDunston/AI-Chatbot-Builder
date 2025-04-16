@@ -28,10 +28,12 @@ class ChatbotCreate(ChatbotBase):
     # We don't ask for created_at; the database sets it.
     pass # No additional fields needed beyond ChatbotBase for now
 
-# --- Update Schema --- (We'll use this later)
-# class ChatbotUpdate(ChatbotBase):
-#     name: Optional[str] = None # Make fields optional for partial updates
-#     # ... other updatable fields
+# --- NEW SCHEMA for updates ---
+class ChatbotUpdate(BaseModel):
+    # Make fields optional so user can update only what they want
+    name: Optional[str] = None
+    # status: Optional[ChatbotStatus] = None # Maybe add later if needed
+# -----------------------------
 
 # --- Read Schema (Response Model) ---
 # Inherits from Base, used for returning chatbot data via the API.

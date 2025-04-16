@@ -1,6 +1,7 @@
 # app/api/endpoints/chatbots.py
 from app.api import deps
 from app.db import models
+from ...db.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List
@@ -70,3 +71,32 @@ async def read_my_chatbots(
     )
     # -----------------------------------
     return chatbots
+
+# --- NEW ENDPOINT: Update Chatbot ---
+@router.patch("/{chatbot_id}", response_model=schemas.ChatbotRead)
+async def update_existing_chatbot(
+    *,
+    db: AsyncSession = Depends(get_async_db),
+    chatbot_id: int,
+    chatbot_in: schemas.ChatbotUpdate, # Request body with optional fields
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """
+    Update a chatbot owned by the current user.
+    """
+    updated_chatbot = await crud.crud_chatbot.update_chatbot(
+        db=db,
+        chatbot_id=chatbot_id,
+        chatbot_in=chatbot_in,
+        owner_id=current_user.id # Pass owner ID for check in CRUD
+    )
+
+    # CRUD function returns None if not found or not owned
+    if not updated_chatbot:
+         raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chatbot not found or not authorized to update",
+         )
+
+    return updated_chatbot
+# ----------------------------------
