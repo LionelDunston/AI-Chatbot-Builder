@@ -10,6 +10,7 @@ from app.schemas.chatbot import ChatbotUpdate
 async def get_chatbot(db: AsyncSession, chatbot_id: int) -> Chatbot | None:
     """Gets a single chatbot by ID."""
     result = await db.execute(select(Chatbot).filter(Chatbot.id == chatbot_id))
+    
     return result.scalars().first()
 
 async def get_chatbots_by_owner(db: AsyncSession, *, owner_id: int, skip: int = 0, limit: int = 100) -> List[Chatbot]:
@@ -71,5 +72,21 @@ async def update_chatbot(
     return db_chatbot
 # ------------------------------------
 
-# --- (Optional) Add Delete function later ---
-# async def delete_chatbot(db: AsyncSession, *, chatbot_id: int, owner_id: int) -> bool: ...
+# --- NEW FUNCTION: Delete Chatbot ---
+async def delete_chatbot(db: AsyncSession, *, chatbot_id: int, owner_id: int) -> bool:
+    """
+    Deletes a chatbot. Ensures the user owns the chatbot.
+    Returns True if deleted, False otherwise (not found or not owned).
+    """
+    # First, get the existing chatbot to verify ownership
+    db_chatbot = await get_chatbot(db=db, chatbot_id=chatbot_id)
+
+    # Check if chatbot exists and if the user owns it
+    if not db_chatbot or db_chatbot.owner_id != owner_id:
+        return False # Indicate not found or not authorized
+
+    # If checks pass, proceed with deletion
+    await db.delete(db_chatbot) # Mark the object for deletion
+    await db.commit()           # Commit the transaction
+    return True                 # Indicate successful deletion
+# ----------------------------------

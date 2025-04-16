@@ -100,3 +100,30 @@ async def update_existing_chatbot(
 
     return updated_chatbot
 # ----------------------------------
+
+# --- NEW ENDPOINT: Delete Chatbot ---
+@router.delete("/{chatbot_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_existing_chatbot(
+    *,
+    db: AsyncSession = Depends(get_async_db),
+    chatbot_id: int,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> None: # Returns None on success (204 No Content)
+    """
+    Delete a chatbot owned by the current user.
+    """
+    deleted = await crud.crud_chatbot.delete_chatbot(
+        db=db,
+        chatbot_id=chatbot_id,
+        owner_id=current_user.id # Pass owner ID for check in CRUD
+    )
+
+    # CRUD function returns False if not found or not owned
+    if not deleted:
+         raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chatbot not found or not authorized to delete",
+         )
+
+    # No content to return on successful delete
+    return None

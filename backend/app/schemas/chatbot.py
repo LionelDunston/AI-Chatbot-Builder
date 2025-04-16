@@ -1,7 +1,7 @@
 # File: backend/app/schemas/chatbot.py
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-
+from .user import UserRead
 
 from typing import Optional # Optional might be needed for update schemas later
 import enum
@@ -44,6 +44,10 @@ class ChatbotRead(ChatbotBase):
     status: ChatbotStatus
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+
+
+ 
 
     # Pydantic V2 config for ORM mode
     model_config = ConfigDict(from_attributes=True)
