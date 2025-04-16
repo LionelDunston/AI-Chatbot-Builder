@@ -9,7 +9,7 @@ from app.db.models.base_class import Base
 #    This step registers them with Base.metadata BEFORE Base might be used elsewhere.
 from app.db.models.user import User
 from app.db.models.chatbot import Chatbot
-
+from app.db.models.data_source import DataSource
 
 
 # Create an asynchronous SQLAlchemy engine instance using the URL from settings
