@@ -16,7 +16,7 @@ from app.db.models.user import User   # Import the User model directly
 # Define the OAuth2 scheme
 # tokenUrl should point to your login endpoint
 reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl="/api/login/access-token"
+     tokenUrl="/api/v1/login/token"
 )
 
 async def get_current_user(
@@ -33,7 +33,9 @@ async def get_current_user(
         )
         # Validate the payload structure using Pydantic schema
         # Extract subject (email) from payload
-        token_data = schemas.TokenData(sub=payload.get("sub"))
+        # --- CORRECTED LINE ---
+        token_data = schemas.TokenPayload(**payload) # Use **payload to unpack dict
+# --- Make sure you are referencing TokenPayload, not TokenData if you renamed it ---
         if token_data.sub is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

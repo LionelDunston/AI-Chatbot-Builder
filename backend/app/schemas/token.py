@@ -11,3 +11,6 @@ class TokenData(BaseModel):
     """Schema for the data encoded within the JWT token."""
     # 'sub' (subject) is a standard JWT claim, often used for user ID/email
     sub: Optional[str] = None
+
+class TokenPayload(BaseModel):
+    sub: int | None = None 
