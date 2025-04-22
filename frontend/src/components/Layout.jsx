@@ -1,8 +1,9 @@
 // src/components/Layout.jsx
 import React from 'react';
-import { Link } from 'react-router-dom'; // Import Link for navigation
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Corrected import path assumed
 
-// Basic inline styles (replace with CSS later)
+// Define styles at the top level of the file
 const headerStyle = {
     backgroundColor: '#f0f0f0',
     padding: '10px 20px',
@@ -12,29 +13,67 @@ const headerStyle = {
 
 const navStyle = {
     display: 'flex',
-    gap: '15px'
+    gap: '15px',
+    alignItems: 'center' // Align items vertically in the nav
 };
 
 const mainStyle = {
     padding: '0 20px'
 };
 
-// The Layout component accepts 'children' which will be the page content
+const userEmailStyle = {
+    marginRight: '15px', // Add some space before the logout button
+    fontStyle: 'italic'
+};
+
+const logoutButtonStyle = {
+    background: 'none',
+    border: 'none',
+    color: '#007bff',
+    cursor: 'pointer',
+    padding: 0,
+    textDecoration: 'underline',
+    fontSize: 'inherit' // Match surrounding text size
+};
+
+
 function Layout({ children }) {
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div>
       <header style={headerStyle}>
         <nav style={navStyle}>
           <Link to="/">Home</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          {/* Add Login/Logout links later based on auth state */}
-          <Link to="/login">Login</Link>
+          {isAuthenticated && <Link to="/dashboard">Dashboard</Link>}
+
+          {isAuthenticated ? (
+             <>
+                {/* Optional: Add some space */}
+                <span style={{ flexGrow: 1 }}></span> {/* Pushes login/logout to the right */}
+                {user && <span style={userEmailStyle}>Welcome, {user.email}!</span>}
+                <button onClick={handleLogout} style={logoutButtonStyle}>
+                  Logout
+                </button>
+             </>
+          ) : (
+             <>
+               <span style={{ flexGrow: 1 }}></span> {/* Pushes login/logout to the right */}
+               <Link to="/login">Login</Link>
+               <Link to="/signup">Sign Up</Link> {/* Added Signup Link */}
+             </>
+          )}
         </nav>
       </header>
       <main style={mainStyle}>
-        {children} {/* Renders the active page component here */}
+        {children}
       </main>
-      {/* You could add a footer here */}
     </div>
   );
 }
