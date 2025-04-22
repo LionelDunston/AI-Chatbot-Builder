@@ -1,56 +1,102 @@
-# File: docker-compose.yml
-version: '3.8' # Specifies the Compose file version
+version: '3.8'
 
-services: # Defines the different containers (services) in your application
-  backend: # The name of our backend service
-    build: ./backend # Tells Compose to build an image using the Dockerfile in the ./backend directory
+services:
+  backend:
+    build: ./backend
     ports:
-      # Maps port 8000 on your host machine to port 80 inside the container
-      # Format: "HOST_PORT:CONTAINER_PORT"
       - "8000:80"
     volumes:
-      # Mounts the local ./backend directory into the container's /app directory
-      # This allows code changes locally to be reflected inside the container immediately
-      - ./backend/app:/code/app
+      # Standardizing to /app - MAKE SURE Dockerfile WORKDIR matches!
+      - ./backend/app:/app
+      # Mount shared upload volume (optional, define below)
+      # - uploads:/app/uploads
     environment:
-      # Define environment variables for the backend to connect to the DB
       # Format: postgresql+asyncpg://USER:PASSWORD@HOST:PORT/DB_NAME
-      # 'db' is the service name of our postgres container below
       - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/appdb
-      # IMPORTANT: Change the default secret key! Generate a secure random string.
-      - SECRET_KEY=a_very_very_insecure_default_secret_key_CHANGE_ME
+      # Load SECRET_KEY from host environment or use default (CHANGE DEFAULT!)
+      - SECRET_KEY=${SECRET_KEY:-a_very_very_insecure_default_secret_key_CHANGE_ME}
+      # Correctly formatted Celery URLs
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       db:
-        condition: service_healthy # Wait for the DB healthcheck to pass
-    networks: # Define a network for services to communicate
-      - app-network
-
-  db: # Name of our PostgreSQL database service
-    image: postgres:15-alpine # Use official Postgres image (version 15, alpine is smaller)
-    volumes:
-      # Persist database data outside the container using a named volume
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      # Set environment variables for the PostgreSQL container itself
-      # These create the default user, password, and database on first startup
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password # IMPORTANT: Use a strong password in a real project!
-      - POSTGRES_DB=appdb
-    ports:
-      # Optional: Map PostgreSQL port 5432 inside container to 5433 on your host machine
-      # This allows you to connect directly using a DB tool (like DBeaver, pgAdmin)
-      - "5433:5432"
-    healthcheck: # Check if the database is ready to accept connections
-        test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-        interval: 5s
-        timeout: 5s
-        retries: 5
+        condition: service_healthy
+      redis: # Add dependency on Redis
+        condition: service_started # Basic check for Redis
     networks:
       - app-network
 
-volumes: # Define the named volume for database data persistence
-  postgres_data:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password # Use strong password
+      - POSTGRES_DB=appdb
+    ports:
+      - "5433:5432" # Host:Container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
-networks: # Define the network that allows services to communicate
+  # --- ADDED: Redis Service ---
+  redis:
+    image: redis:7-alpine
+    networks:
+      - app-network
+    # Optional healthcheck for Redis if needed
+    # healthcheck:
+    #   test: ["CMD", "redis-cli", "ping"]
+    #   interval: 5s
+    #   timeout: 3s
+    #   retries: 5
+
+  # --- ADDED: Celery Worker Service ---
+  worker:
+    build: ./backend # Use same build context as backend
+    # Command points to where celery_app is defined in your code
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    volumes:
+      # Mount code same as backend
+      - ./backend/app:/app
+      # Mount shared upload volume (optional)
+      # - uploads:/app/uploads
+    environment:
+      # Needs same environment variables as backend
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/appdb
+      - SECRET_KEY=${SECRET_KEY:-a_very_very_insecure_default_secret_key_CHANGE_ME}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis: # Depends on Redis broker
+        condition: service_started
+      db: # Depends on DB if tasks access it
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # --- (Optional) ADDED: Celery Flower Monitor ---
+  flower:
+    image: mher/flower
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    ports:
+      - "5555:5555" # Access Flower UI at http://localhost:5555
+    depends_on:
+      - redis
+      - worker # Logically depends on worker being up
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  # Define optional shared volume for uploads
+  # uploads:
+
+networks:
   app-network:
     driver: bridge
